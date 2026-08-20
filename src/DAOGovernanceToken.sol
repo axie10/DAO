@@ -42,7 +42,7 @@ contract DAOGovernanceToken is ERC20, Ownable {
     }
 
     /**
-     * @dev function to delegate votes to other account
+     * @dev delegateVotingPower function to delegate votes to other account
      * @param delegate address to get votes
      * @param amount amount to transfer other account
      */
