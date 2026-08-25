@@ -14,7 +14,7 @@ contract DAOTreasury is Ownable {
     DAOGovernor public dao;
 
     // Mapping
-    mapping(uint256 => bool) public approveProposal;
+    mapping(uint256 => bool) public approveProposals;
     mapping(uint256 => bool) public executedProposal;
 
     // Events
@@ -36,6 +36,47 @@ contract DAOTreasury is Ownable {
         require(_dao != address(0), "Address not valid");
         dao = DAOGovernor(_dao);
         emit DAOSet(_dao);
+    }
+
+    /**
+     * @dev Approve proposal for spending (only DAO)
+     * @param proposalId ID of the proposal approve
+     */
+    function approveProposal(uint256 proposalId) external {
+        require(msg.sender == address(dao), "Only DAO con approve proposals");
+        require(!approveProposals[proposalId], "Proposal already approve");
+
+        approveProposals[proposalId] = true;
+        emit ApproveProposal(proposalId);
+    }
+
+    /**
+     * @dev Approve proposal for spending (only DAO)
+     * @param proposalId ID of the proposal approve
+     * @param recipient address to send funds
+     * @param amount amount to send
+     * @param token token addresss (address(0) for ETH)
+     */
+    function spendFundsForProposal(uint256 proposalId, address recipient, uint256 amount, address token) external {
+        require(msg.sender == address(dao), "Only DAO con approve proposals");
+        require(approveProposals[proposalId], "Proposal not approved");
+        require(!executedProposal[proposalId], "Proposal already executed");
+        require(recipient != address(0), "Recipient invalid");
+        require(amount > 0, "Amount must be greater then 0");
+
+        executedProposal[proposalId] = true;
+
+        if (token == address(0)) {
+            require(address(this).balance >= amount, "Insufficient ETH balance");
+            (bool success,) = recipient.call{value: amount}("");
+            require(success, "DAOTreasury: ETH transfer failed");
+        } else {
+            IERC20 tokenContract = IERC20(token);
+            require(tokenContract.balanceOf(address(this)) >= amount, "Insufficient token balance");
+            tokenContract.safeTransfer(recipient, amount);
+        }
+
+        emit FundsSpend(proposalId, recipient, amount, token);
     }
 
     /**
