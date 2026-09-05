@@ -14,8 +14,8 @@ contract DAOTreasury is Ownable {
     DAOGovernor public dao;
 
     // Mapping
-    mapping(uint256 => bool) public approveProposals;
-    mapping(uint256 => bool) public executedProposal;
+    mapping(uint256 => bool) public approvedProposals;
+    mapping(uint256 => bool) public executedProposals;
 
     // Events
     event ApproveProposal(uint256 indexed proposalId);
@@ -32,7 +32,7 @@ contract DAOTreasury is Ownable {
      * @dev function to change DAOGrovernance (rules smart contract)
      * @param _dao new address to DAO smart Contract
      */
-    function setDao(address _dao) external onlyOwner {
+    function setDAO(address _dao) external onlyOwner {
         require(_dao != address(0), "Address not valid");
         dao = DAOGovernor(_dao);
         emit DAOSet(_dao);
@@ -44,9 +44,9 @@ contract DAOTreasury is Ownable {
      */
     function approveProposal(uint256 proposalId) external {
         require(msg.sender == address(dao), "Only DAO con approve proposals");
-        require(!approveProposals[proposalId], "Proposal already approve");
+        require(!approvedProposals[proposalId], "Proposal already approve");
 
-        approveProposals[proposalId] = true;
+        approvedProposals[proposalId] = true;
         emit ApproveProposal(proposalId);
     }
 
@@ -59,12 +59,12 @@ contract DAOTreasury is Ownable {
      */
     function spendFundsForProposal(uint256 proposalId, address recipient, uint256 amount, address token) external {
         require(msg.sender == address(dao), "Only DAO con approve proposals");
-        require(approveProposals[proposalId], "Proposal not approved");
-        require(!executedProposal[proposalId], "Proposal already executed");
+        require(approvedProposals[proposalId], "Proposal not approved");
+        require(!executedProposals[proposalId], "Proposal already executed");
         require(recipient != address(0), "Recipient invalid");
         require(amount > 0, "Amount must be greater then 0");
 
-        executedProposal[proposalId] = true;
+        executedProposals[proposalId] = true;
 
         if (token == address(0)) {
             require(address(this).balance >= amount, "Insufficient ETH balance");
@@ -103,6 +103,37 @@ contract DAOTreasury is Ownable {
     }
 
     /**
+     * @dev Get treasury balance for a specific token
+     * @param token Token address (address(0) for ETH)
+     * @return balance Current balance
+     */
+    function getBalance(address token) external view returns (uint256 balance) {
+        if (token == address(0)) {
+            return address(this).balance;
+        } else {
+            return IERC20(token).balanceOf(address(this));
+        }
+    }
+
+    /**
+     * @dev Check if a proposal is approved
+     * @param proposalId ID of the proposal
+     * @return approved Whether the proposal is approved
+     */
+    function isProposalApproved(uint256 proposalId) external view returns (bool approved) {
+        return approvedProposals[proposalId];
+    }
+
+    /**
+     * @dev Check if a proposal has been executed
+     * @param proposalId ID of the proposal
+     * @return executed Whether the proposal has been executed
+     */
+    function isProposalExecuted(uint256 proposalId) external view returns (bool executed) {
+        return executedProposals[proposalId];
+    }
+
+    /**
      * @dev recived eth without call any functions
      */
     receive() external payable {
@@ -115,7 +146,7 @@ contract DAOTreasury is Ownable {
      * @param to address to send
      * @param amount amount to send
      */
-    function emergencyWithdraw(address token, address to, uint256 amount) external onlyOwner {
+    function emergencyWithdraw(address token, uint256 amount, address to) external onlyOwner {
         require(to != address(0), "Invalid address");
         require(amount > 0, "Must send tokens");
 

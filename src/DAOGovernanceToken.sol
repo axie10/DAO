@@ -8,9 +8,9 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /// @dev Token used for DAO Governance voting
 contract DAOGovernanceToken is ERC20, Ownable {
     // Variables
-    mapping(address => bool) hasDelegated;
-    mapping(address => address) delegates;
-    mapping(address => uint256) delegatesVotes;
+    mapping(address => bool) public hasDelegated;
+    mapping(address => address) public delegates;
+    mapping(address => uint256) public delegatesVotes;
 
     // Events
     event VotingPowerDelegated(address indexed delegator, address indexed delegated, uint256 amount);
